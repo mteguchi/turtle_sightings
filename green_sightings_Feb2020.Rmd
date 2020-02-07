@@ -1,0 +1,203 @@
+---
+title: "Green turtle in southern CA Feb 2020"
+output: html_notebook
+---
+
+
+```{r}
+rm(list=ls())
+library(lubridate)
+library(RODBC)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+SWFSC <- F
+```
+
+This file is used to extract green turtle sightings in southern CA for Megan's paper. Older data are extracted from the database directly. Newer data were typed into a spreadsheet, after finding out which data have not been entered using sightings_DB_update.Rmd.  New entries were made in data2upload_2020-02-06.xls. 
+
+In order to do this extration at home, I saved the data into a local file. 
+
+```{r}
+if (SWFSC){
+  turtle <- odbcConnect(dsn = 'Turtle', uid = '', pwd = '')
+
+  # get SD Bay results:
+  turtle.sightings <- sqlQuery(turtle, 'select * from tbl_Sighting') 
+  
+  odbcClose(turtle)
+  
+  turtle.sightings %>% select(Date_Observed,
+                              Sighting_Number,
+                              Species_ID,
+                              City_ID,
+                              County_ID,
+                              State_ID,
+                              Latitude,
+                              Longitude) -> turtle.sightings
+  
+  readr::write_csv(turtle.sightings,
+                   path = paste0("data/turtle_sightings.csv"))
+  
+  SWFSCcommon <- odbcConnect(dsn = "common", uid = "", pwd = "")
+  
+  # get the species table
+  sp.table <- sqlQuery(SWFSCcommon, "select * from tblSpecies") %>% 
+    select(-EditDate, -EditUserID, -RecordCreationDate, -NomenclatureAuthority, -Comments)
+  county.table <- sqlQuery(SWFSCcommon, "select * from tblCounty") %>%
+    select(-EditDate, -EditUserID, -RecordCreationDate)
+  state.table <- sqlQuery(SWFSCcommon, "select * from tblState") %>%
+    select(-EditDate, -EditUserID, -RecordCreationDate)
+  
+  city.table <- sqlQuery(SWFSCcommon, "select * from tblCity") %>%
+    select(-EditDate, -EditUserID, -RecordCreationDate)
+  
+  odbcClose(SWFSCcommon)
+  
+  readr::write_csv(sp.table,
+                   path = paste0("data/sp_table.csv"))
+  
+  readr::write_csv(county.table,
+                   path = paste0("data/county_table.csv"))
+  readr::write_csv(state.table,
+                   path = paste0("data/state_table.csv"))
+  readr::write_csv(city.table,
+                   path = paste0("data/city_table.csv"))
+  
+} else {
+  cols.sightings <- cols(Sighting_Number = col_factor(),
+                         Species_ID = col_integer(),
+                         City_ID = col_integer(),
+                         County_ID = col_integer(),
+                         State_ID = col_integer(),
+                         Latitude = col_double(),
+                         Longitude = col_double())
+  
+  turtle.sightings <- readr::read_csv(file = "data/turtle_sightings.csv",
+                                      col_types = cols.sightings)
+  
+  cols.sp <- cols(ID = col_double(),
+                  TaxanomicOrder = col_character(),
+                  SubOrder = col_character(),
+                  InfraOrder = col_character(),
+                  Family = col_character(),
+                  FamilyCommonName = col_character(),
+                  Genus = col_character(),
+                  Species = col_character(),
+                  Subspecies = col_character(),
+                  CommonName = col_character(),
+                  SpType = col_character(),
+                  SpName = col_character(),
+                  CetaceanCode = col_double(),
+                  AerialFisheryCode = col_character(),
+                  BirderCode = col_character(),
+                  AlternateCode1 = col_character(),
+                  AlternateCode2 = col_character())
+  
+  sp.table <- readr::read_csv(file = "data/sp_table.csv",
+                              col_types = cols.sp) 
+  
+  cols.county <- cols(ID = col_integer(),
+                      Name = col_character(),
+                      CountryID = col_integer(),
+                      StateID = col_integer(),
+                      OceanBasin = col_integer())
+  county.table <- readr::read_csv(file = "data/county_table.csv",
+                                  col_types = cols.county)
+  
+  cols.state <- cols(ID = col_integer(),
+                     TwoLetterID = col_character(),
+                     Name = col_character(),
+                     CountryID = col_integer(),
+                     OceanBasinID = col_integer())
+  state.table <- readr::read_csv(file = "data/state_table.csv",
+                                 col_types = cols.state)
+  
+  cols.city <- cols(ID = col_integer(),
+                    Name = col_character(),
+                    CountryID = col_integer(),
+                    StateID = col_integer(),
+                    CountyID = col_integer(),
+                    OceanBasin = col_integer())
+  city.table <- readr::read_csv(file = "data/city_table.csv",
+                                col_types = cols.city)
+}
+
+```
+
+Then, bring in the missing part - this is the part that was not entered into the database as of early February 2020. I have not been able to upload to the database so I have them in a spreadsheet. 
+
+```{r}
+new.data <- xlsx::read.xlsx(file = "data/data2upload_2020-02-06.xlsx",
+                            sheetIndex = 1) %>% 
+  select(Date_Observed,
+         Sighting_Number,
+         Species_ID,
+         City_ID,
+         County_ID,
+         State_ID,
+         Latitude,
+         Longitude )
+
+all.data <- rbind(turtle.sightings, new.data) 
+
+# remove unknown species - this needs to be fixed eventually
+all.data %>%
+  filter(!is.na(Species_ID)) -> all.data.1
+
+# prep county, city, species names
+sp.table %>% mutate(Species_ID = ID) %>% #-> sp.table.2
+  right_join(all.data.1, by = "Species_ID") %>% # -> sp.table.2
+  select(Date_Observed, Sighting_Number, Species_ID, City_ID,
+         County_ID, State_ID, Latitude, Longitude, Genus, Species) %>%
+  filter(Genus == "Chelonia") -> green.sightings
+
+county.table %>% mutate(County_ID = ID,
+                        County_Name = Name) %>%
+  select(County_ID, County_Name, StateID) %>%
+  right_join(green.sightings, by = "County_ID") %>%
+  filter(County_Name == "San Diego" |
+           County_Name == "Orange" |
+           County_Name == "Los Angeles" |
+           County_Name == "Ventura" |
+           County_Name == "Santa Barbara") %>%
+  mutate(County_Name = factor(County_Name,
+                              levels = c("Santa Barbara",
+                                         "Ventura", 
+                                         "Los Angeles",
+                                         "Orange",
+                                         "San Diego"))) -> green.SoCal.sightings
+
+```
+
+
+Let's make sure there are no duplicated entries.
+
+```{r}
+unique.sightings <- unique(green.SoCal.sightings$Sighting_Number)
+length(unique.sightings) - nrow(green.SoCal.sightings)
+```
+
+Yes!!
+
+Make a histogram
+```{r}
+p1 <- ggplot(data = green.SoCal.sightings) + 
+  geom_bar(aes(x = County_Name))
+
+p1
+```
+
+How about by year:
+
+```{r}
+green.SoCal.sightings %>% mutate(Year = year(Date_Observed)) -> green.SoCal.sightings
+
+green.SoCal.sightings[is.na(green.SoCal.sightings$Year), "Year"] <- 2017
+
+p2 <- ggplot(green.SoCal.sightings) + 
+  geom_bar(aes(x = Year, fill = County_Name))
+p2
+```
+

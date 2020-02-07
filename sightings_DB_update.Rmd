@@ -1,0 +1,108 @@
+---
+title: "Updating sightings database in a batch"
+output: html_notebook
+---
+
+This script attempts to read sightings directories in a local hard drive and creates a text file that can be uploaded to the sightings database. The output of this script still needs to be populated prior to uploading. 
+
+First initialize the workspace and load necessary libraries.
+```{r}
+library(lubridate)
+library(RODBC)
+library(tidyverse)
+library(dplyr)
+
+ifelse(Sys.info()[1] == 'Linux',
+       source('~/Documents/R/tools/TomosFunctions.R'),
+       source('~/R/tools/TomosFunctions.R'))
+
+# The last run date of query - important only if local saved file is used - see below
+run.date <- "2018-08-07"
+
+# Whether or not at SWFSC - either access the database directory or use a saved file.
+SWFSC <- T
+
+# The location of all directories that are sightings specific
+local.path <- "D:/TomosFolders/turtles/sightings/Turtle Sightings"
+```
+
+Then connect to the database:
+```{r}
+if (SWFSC){
+  turtle <- odbcConnect(dsn = 'Turtle', uid = '', pwd = '')
+
+  # get SD Bay results:
+  turtle.sightings <- sqlQuery(turtle, 'select * from tbl_Sighting') 
+  
+    # select(NMFS_Tag, Turtle_ID, Year_caught,
+    #        Month_caught, Day_caught, Caught_Dead,
+    #        PIT_Tag_LFF, PIT_Tag_RFF, Inconel_Tag_LFF,
+    #        Inconel_Tag_RFF, Sex, Weight_kg,
+    #        Str_Carapace_Length_cm, Str_Carapace_Width_cm,
+    #        Cur_Carapace_Length_cm, Cur_Carapace_Width_cm,
+    #        Sat_Tag_ID, Satellite_Tag_Added) %>%
+    # filter(., !is.na(NMFS_Tag)) %>%
+    # filter(., !is.na(Sat_Tag_ID)) %>%
+    # mutate(., Capture_Date = as.Date(paste0(Year_caught, '-',
+    #                                         Month_caught, '-',
+    #                                         Day_caught),
+    #                                  format = '%Y-%m-%d'))
+
+  odbcClose(turtle)
+  # csv files don't work so well because descriptions contain commas... 
+  # readr::write_csv(turtle.sightings, 
+  #                  path = paste0('data/turtle_sightings_', 
+  #                                Sys.Date(), ".csv"))
+} else {
+  turtle.sightings <- read.csv(paste0('data/turtle_sightings_', 
+                                 run.date, ".csv"))
+}
+```
+
+Then look at the directory in which all sightings data are stored in a local hard drive.
+
+```{r}
+local.dir <- list.dirs(path = local.path, recursive = FALSE)
+
+# find all directory names, split them by the path name so that only sighting number
+# and name of the observer are kept. Then, split those into two fields and
+# name them correctly
+sightings.df <- apply(as.array(local.dir), 
+                      FUN = function(x) unlist(strsplit(x, 
+                                                        split = paste0(local.path,
+                                                                       "/")))[2], 
+                      MARGIN = 1) %>%
+  strsplit(" - ") %>% unlist() %>%
+  matrix(ncol = 2, byrow = TRUE) %>%
+  as.data.frame(stringsAsFactors = FALSE) %>% 
+  setNames(c("Sighting_Number", "Observed_By"))
+
+```
+
+Now that we have the most current database entries and what we have in the hard drive, we do an anti-join to pick up those from the hard drive that are not in the database. Then, create a new dataframe with all necessary columns, fill in the two columns, and save it as a text file.
+
+```{r}
+# Warning returns because Sighting_Number in turtle.sightings is a factor variable.
+missing.sightings <- anti_join(sightings.df, 
+                               turtle.sightings, 
+                               by = "Sighting_Number")
+
+sighting.date <- apply(missing.sightings, 
+                       FUN = function(x) unlist(strsplit(x, split = "-"))[1], 
+                       MARGIN = 1) %>%
+  as.numeric() %>%
+  yyyymmdd2date()
+
+col.names <- colnames(turtle.sightings)
+out.df <- setNames(data.frame(matrix(ncol = length(col.names),
+                                     nrow = nrow(missing.sightings))), 
+                   col.names)
+
+out.df[, "Sighting_Number"] <- missing.sightings$Sighting_Number
+out.df[, "Observed_By"] <- missing.sightings$Observed_By
+out.df[, "Date_Observed"] <- sighting.date
+
+# write.csv(out.df, 
+#           file = paste0("data/data2upload_", Sys.Date(), ".csv"),
+#           quote = FALSE, na = "")
+```

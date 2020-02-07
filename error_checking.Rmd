@@ -1,0 +1,21 @@
+---
+title: "Check error before uploading"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+library(lubridate)
+library(RODBC)
+library(tidyverse)
+library(dplyr)
+
+filename.in <- "data/sightings_upload_upto2018-08-05.txt"
+
+dat.in <- read.table(file = filename.in, header = TRUE, sep = "\t" )
+
+
+```
+
+
+
