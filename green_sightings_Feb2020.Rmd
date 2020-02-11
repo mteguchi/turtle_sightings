@@ -129,6 +129,8 @@ if (SWFSC){
 Then, bring in the missing part - this is the part that was not entered into the database as of early February 2020. I have not been able to upload to the database so I have them in a spreadsheet. 
 
 ```{r}
+#xlsx library requries Java... ITS doesn't like installing Java... 
+
 new.data <- xlsx::read.xlsx(file = "data/data2upload_2020-02-06.xlsx",
                             sheetIndex = 1) %>% 
   select(Date_Observed,
