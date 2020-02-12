@@ -203,3 +203,11 @@ p2 <- ggplot(green.SoCal.sightings) +
 p2
 ```
 
+
+Write out green results into a file:
+```{r}
+write.csv(green.SoCal.sightings,
+          file = "data/SoCal_green_sightings.csv",
+          quote = F, row.names = F)
+```
+
