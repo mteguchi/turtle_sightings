@@ -1,0 +1,59 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This document is used to plot sightings of green turtles along the southern CA. 
+
+green_sihtings_Feb2020.Rmd should be run on a computer with Java. Then, save the green.SoCal.sightings object as a .csv file. 
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+source("turtle_sightings_fcns.R")
+
+land.color <- '#333333'
+```
+
+Bring in the data
+```{r}
+# these are from database and to-be-uploaded data combined in green_sightings_Feb2020.Rmd
+greens <- read.csv("data/SoCal_green_sightings.csv")
+
+
+coast.line <- getCoastLine('~/R/Oceans and Maps/coast/coast_Epac.txt',
+                           lon.limits = c(-121, -117),
+                           lat.limits = c(32, 35))
+
+coast.line.df <- do.call(rbind, coast.line)
+
+study.area.Sp <- latlon2sp(study.area, center.UTM)
+study.area.df2 <- data.frame(lat = study.area.Sp@data$lat,
+                             lon = study.area.Sp@data$lon-360)
+
+p2 <- ggplot() +
+  geom_polygon(fill = land.color,
+               data = coast.line.df,
+               aes(x = Longitude,
+                   y = Latitude, group = idx))  +
+  geom_point(data = greens,
+              aes(x = Longitude, 
+                  y = Latitude, 
+                  color = as.factor(Year)),
+              size = 3) +
+  geom_point(data = data.frame(y = 32.367, x = -117.783),
+             aes(x = x, y = y)) +
+  coord_map()+   # this is smart!
+  #geom_path(data = offshore.box,
+  #          aes(x = Longitude, y = Latitude)) +
+  ylab("Latitude") +
+  xlab("Longitude") +
+  #ggtitle("Loggerhead turtle sightings") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.1, 0.3),
+        legend.background = element_blank(),
+        legend.title = element_blank())
+
+p2
+```
+
