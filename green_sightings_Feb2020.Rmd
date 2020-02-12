@@ -174,34 +174,7 @@ county.table %>% mutate(County_ID = ID,
 ```
 
 
-Let's make sure there are no duplicated entries.
 
-```{r}
-unique.sightings <- unique(green.SoCal.sightings$Sighting_Number)
-length(unique.sightings) - nrow(green.SoCal.sightings)
-```
-
-Yes!!
-
-Make a histogram
-```{r}
-p1 <- ggplot(data = green.SoCal.sightings) + 
-  geom_bar(aes(x = County_Name))
-
-p1
-```
-
-How about by year:
-
-```{r}
-green.SoCal.sightings %>% mutate(Year = year(Date_Observed)) -> green.SoCal.sightings
-
-green.SoCal.sightings[is.na(green.SoCal.sightings$Year), "Year"] <- 2017
-
-p2 <- ggplot(green.SoCal.sightings) + 
-  geom_bar(aes(x = Year, fill = County_Name))
-p2
-```
 
 
 Write out green results into a file:

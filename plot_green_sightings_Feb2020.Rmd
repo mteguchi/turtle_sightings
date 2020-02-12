@@ -40,9 +40,8 @@ p2 <- ggplot() +
               aes(x = Longitude, 
                   y = Latitude, 
                   color = as.factor(Year)),
-              size = 3) +
-  geom_point(data = data.frame(y = 32.367, x = -117.783),
-             aes(x = x, y = y)) +
+             alpha = 0.7,
+             size = 3) +
   coord_map()+   # this is smart!
   #geom_path(data = offshore.box,
   #          aes(x = Longitude, y = Latitude)) +
@@ -55,5 +54,41 @@ p2 <- ggplot() +
         legend.title = element_blank())
 
 p2
+
+ggsave(filename = "figures/map_green_sightings.png", 
+       plot = p2,
+       device = "png", dpi = 600)
+```
+
+Let's make sure there are no duplicated entries.
+
+```{r}
+unique.sightings <- unique(greens$Sighting_Number)
+length(unique.sightings) - nrow(greens)
+```
+
+Yes!!
+
+Make a histogram
+```{r}
+greens %>% mutate(County_Name = factor(County_Name,
+                              levels = c("Santa Barbara",
+                                         "Ventura", 
+                                         "Los Angeles",
+                                         "Orange",
+                                         "San Diego"))) -> greens
+p3 <- ggplot(data = greens) + 
+  geom_bar(aes(x = County_Name))
+
+p3
+```
+
+How about by year:
+
+```{r}
+
+p4 <- ggplot(greens) + 
+  geom_bar(aes(x = Year, fill = County_Name))
+p4
 ```
 
