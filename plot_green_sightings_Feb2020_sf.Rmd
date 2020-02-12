@@ -1,0 +1,202 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This document is used to plot sightings of green turtles along the southern CA. (modified to use sf package, rather than sp)
+
+green_sihtings_Feb2020.Rmd should be run on a computer with Java. Then, save the green.SoCal.sightings object as a .csv file. 
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+source("turtle_sightings_sf_fcns.R")
+
+# get county lines
+county.lines <- st_read("~/R/Oceans and Maps/ca-county-boundaries/CA_Counties")
+
+land.color <- '#333333'
+```
+
+Bring in the data
+```{r}
+# these are from database and to-be-uploaded data combined in green_sightings_Feb2020.Rmd
+greens <- read.csv("data/SoCal_green_sightings.csv") %>%
+  mutate(County_Name = factor(County_Name,
+                              levels = c("Santa Barbara",
+                                         "Ventura", 
+                                         "Los Angeles",
+                                         "Orange",
+                                         "San Diego"))) %>%
+  mutate(Date_Observed = as.Date(Date_Observed)) %>%
+  mutate(Year = year(Date_Observed))
+         
+# we know that the missing date is 2017 (201704xx-01)
+greens[is.na(greens$Year), "Year"] <- 2017
+
+
+```
+
+Let's make sure there are no duplicated entries.
+
+```{r}
+unique.sightings <- unique(greens$Sighting_Number)
+length(unique.sightings) - nrow(greens)
+```
+
+Yes!!
+
+```{r}
+greens %>% group_by(County_Name) %>% summarise(n())
+```
+
+
+Make a histogram
+```{r}
+
+p3 <- ggplot(data = greens) + 
+  geom_bar(aes(x = County_Name))
+
+p3
+```
+
+How about by year:
+
+```{r}
+greens %>% group_by(Year) %>% summarise(n())
+```
+
+
+```{r}
+
+p4 <- ggplot(greens) + 
+  geom_bar(aes(x = Year, fill = County_Name))
+p4
+```
+
+Map
+
+```{r}
+# get the coast lines
+coast.line <- getCoastLine('~/R/Oceans and Maps/coast/coast_Epac.txt',
+                           lon.limits = c(-121, -116.5),
+                           lat.limits = c(32, 35.2))
+
+coast.line.df <- do.call(rbind, coast.line) 
+
+coast.line.df %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"),
+           crs = "+proj=longlat +datum=WGS84") -> coast.line.sf
+
+# get the county  lines
+county.lines %>% filter(NAME == "Santa Barbara") %>%
+  st_transform(CRS("+proj=longlat +datum=WGS84"))  -> SB.county.line
+
+county.lines %>% filter(NAME == "Ventura") %>%
+  st_transform(CRS("+proj=longlat +datum=WGS84"))-> V.county.line
+
+county.lines %>% filter(NAME == "Los Angeles") %>%
+  st_transform(CRS("+proj=longlat +datum=WGS84"))-> LA.county.line
+
+county.lines %>% filter(NAME == "Orange") %>%
+  st_transform(CRS("+proj=longlat +datum=WGS84"))-> O.county.line
+
+county.lines %>% filter(NAME == "San Diego") %>%
+  st_transform(CRS("+proj=longlat +datum=WGS84"))-> SD.county.line
+
+font.size <- 3.5
+p2 <- ggplot() +
+  geom_polygon(data = coast.line.df,
+               aes(x = Longitude, y = Latitude, group = idx),
+                   fill = land.color)  +
+  geom_sf(data = SB.county.line,
+          color = "white",
+          fill = "transparent") +
+  geom_text(data = data.frame(x = -120, y = 34.75),
+            aes(x = x, y = y, label = "Santa Barbara"),
+            color = "white", size = font.size, fontface = "bold") + 
+  geom_sf(data = V.county.line,
+          color = "yellow",
+          fill = "transparent") +
+  geom_text(data = data.frame(x = -119.1, y = 34.5),
+            aes(x = x, y = y, label = "Ventura"),
+            color = "white", size = font.size, fontface = "bold") + 
+  geom_sf(data = LA.county.line,
+          color = "blue",
+          fill = "transparent") +
+  geom_text(data = data.frame(x = -118.2, y = 34.25),
+            aes(x = x, y = y, label = "Los Angeles"),
+            color = "white", size = font.size, fontface = "bold") + 
+  geom_sf(data = O.county.line,
+          color = "red",
+          fill = "transparent") +
+  geom_text(data = data.frame(x = -117.5, y = 33.8),
+            aes(x = x, y = y, label = "Orange"),
+            color = "white", size = font.size, fontface = "bold") + 
+  geom_sf(data = SD.county.line,
+          color = "purple",
+          fill = "transparent") +
+  geom_text(data = data.frame(x = -117.2, y = 33.3),
+            aes(x = x, y = y, label = "San Diego"),
+            color = "white", size = font.size, fontface = "bold",
+            angle = -45) + 
+  geom_point(data = greens,
+              aes(x = Longitude, 
+                  y = Latitude, 
+                  color = as.factor(Year)),
+             alpha = 0.7,
+             size = 3) +
+  coord_sf(xlim = c(-121, -117),
+           ylim = c(32, 35.2))+   # this is smart!
+  #geom_path(data = offshore.box,
+  #          aes(x = Longitude, y = Latitude)) +
+  ylab("Latitude") +
+  xlab("Longitude") +
+  #ggtitle("Loggerhead turtle sightings") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.1, 0.3),
+        legend.background = element_blank(),
+        legend.title = element_blank())
+
+p2
+
+ggsave(filename = "figures/map_green_sightings_county_lines.png",
+       plot = p2,
+       device = "png", dpi = 600)
+
+
+```
+
+```{r}
+p3 <- ggplot() +
+  geom_polygon(data = coast.line.df,
+               aes(x = Longitude, y = Latitude, group = idx),
+                   fill = land.color)  +
+   geom_point(data = greens,
+              aes(x = Longitude, 
+                  y = Latitude, 
+                  color = as.factor(Year),
+                  shape = County_Name),
+             alpha = 0.7,
+             size = 3) +
+  coord_map(xlim = c(-121, -116.8),
+           ylim = c(32, 35.2))+   # this is smart!
+  #geom_path(data = offshore.box,
+  #          aes(x = Longitude, y = Latitude)) +
+  ylab("Latitude") +
+  xlab("Longitude") +
+  #ggtitle("Loggerhead turtle sightings") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "right",
+        legend.background = element_blank(),
+        legend.title = element_blank())
+
+p3
+
+# ggsave(filename = "figures/map_green_sightings_county_shapes.png",
+#        plot = p3,
+#        device = "png", dpi = 600)
+
+```
+
