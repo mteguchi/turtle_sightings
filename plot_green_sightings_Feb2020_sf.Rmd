@@ -139,8 +139,7 @@ p2 <- ggplot() +
           fill = "transparent") +
   geom_text(data = data.frame(x = -117.2, y = 33.3),
             aes(x = x, y = y, label = "San Diego"),
-            color = "white", size = font.size, fontface = "bold",
-            angle = -45) + 
+            color = "white", size = font.size, fontface = "bold") + # angle = -45 
   geom_point(data = greens,
               aes(x = Longitude, 
                   y = Latitude, 
