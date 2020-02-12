@@ -18,9 +18,62 @@ land.color <- '#333333'
 Bring in the data
 ```{r}
 # these are from database and to-be-uploaded data combined in green_sightings_Feb2020.Rmd
-greens <- read.csv("data/SoCal_green_sightings.csv")
+greens <- read.csv("data/SoCal_green_sightings.csv") %>%
+  mutate(County_Name = factor(County_Name,
+                              levels = c("Santa Barbara",
+                                         "Ventura", 
+                                         "Los Angeles",
+                                         "Orange",
+                                         "San Diego"))) %>%
+  mutate(Date_Observed = as.Date(Date_Observed)) %>%
+  mutate(Year = year(Date_Observed))
+         
+# we know that the missing date is 2017 (201704xx-01)
+greens[is.na(greens$Year), "Year"] <- 2017
 
 
+```
+
+Let's make sure there are no duplicated entries.
+
+```{r}
+unique.sightings <- unique(greens$Sighting_Number)
+length(unique.sightings) - nrow(greens)
+```
+
+Yes!!
+
+```{r}
+greens %>% group_by(County_Name) %>% summarise(n())
+```
+
+
+Make a histogram
+```{r}
+
+p3 <- ggplot(data = greens) + 
+  geom_bar(aes(x = County_Name))
+
+p3
+```
+
+How about by year:
+
+```{r}
+greens %>% group_by(Year) %>% summarise(n())
+```
+
+
+```{r}
+
+p4 <- ggplot(greens) + 
+  geom_bar(aes(x = Year, fill = County_Name))
+p4
+```
+
+Map
+
+```{r}
 coast.line <- getCoastLine('~/R/Oceans and Maps/coast/coast_Epac.txt',
                            lon.limits = c(-121, -117),
                            lat.limits = c(32, 35))
@@ -55,40 +108,8 @@ p2 <- ggplot() +
 
 p2
 
-ggsave(filename = "figures/map_green_sightings.png", 
-       plot = p2,
-       device = "png", dpi = 600)
-```
-
-Let's make sure there are no duplicated entries.
-
-```{r}
-unique.sightings <- unique(greens$Sighting_Number)
-length(unique.sightings) - nrow(greens)
-```
-
-Yes!!
-
-Make a histogram
-```{r}
-greens %>% mutate(County_Name = factor(County_Name,
-                              levels = c("Santa Barbara",
-                                         "Ventura", 
-                                         "Los Angeles",
-                                         "Orange",
-                                         "San Diego"))) -> greens
-p3 <- ggplot(data = greens) + 
-  geom_bar(aes(x = County_Name))
-
-p3
-```
-
-How about by year:
-
-```{r}
-
-p4 <- ggplot(greens) + 
-  geom_bar(aes(x = Year, fill = County_Name))
-p4
+# ggsave(filename = "figures/map_green_sightings.png", 
+#        plot = p2,
+#        device = "png", dpi = 600)
 ```
 

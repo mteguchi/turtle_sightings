@@ -12,7 +12,7 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 
-SWFSC <- F
+SWFSC <- T
 ```
 
 This file is used to extract green turtle sightings in southern CA for Megan's paper. Older data are extracted from the database directly. Newer data were typed into a spreadsheet, after finding out which data have not been entered using sightings_DB_update.Rmd.  New entries were made in data2upload_2020-02-06.xls. 
@@ -29,6 +29,7 @@ if (SWFSC){
   odbcClose(turtle)
   
   turtle.sightings %>% select(Date_Observed,
+                              Observed_By,
                               Sighting_Number,
                               Species_ID,
                               City_ID,
@@ -131,9 +132,32 @@ Then, bring in the missing part - this is the part that was not entered into the
 ```{r}
 #xlsx library requries Java... ITS doesn't like installing Java... 
 
-new.data <- xlsx::read.xlsx(file = "data/data2upload_2020-02-06.xlsx",
-                            sheetIndex = 1) %>% 
+col_types <- cols(Date_Observed = col_date(format = "%m/%d/%Y"),
+                  Date_Approximate = col_character(),
+                  Time_Observed = col_character(), 
+                  Sighting_Number = col_character(),
+                  Observed_By = col_character(),
+                  Observed_By_Type = col_character(),
+                  Length_Of_Time = col_character(),
+                  Species_ID = col_integer(),
+                  Digital_Photos_Taken = col_factor(),
+                  Island_ID = col_integer(),
+                  City_ID = col_integer(),
+                  County_ID = col_integer(),
+                  State_ID = col_integer(),
+                  Country_ID = col_integer(),
+                  Latitude = col_double(),
+                  Latitude_Precision = col_double(),
+                  Latitude_Precision_Units = col_character(),
+                  Longitude = col_double(),
+                  Longitude_Precision = col_double(),
+                  Longitude_Precision_Units = col_character(),
+                  Lat_Long_Determined_By = col_character())
+
+new.data <- read_csv(file = "data/data2upload_2020-02-06_NoText.csv",
+                     col_types = col_types) %>% 
   select(Date_Observed,
+         Observed_By,
          Sighting_Number,
          Species_ID,
          City_ID,
@@ -172,8 +196,6 @@ county.table %>% mutate(County_ID = ID,
                                          "San Diego"))) -> green.SoCal.sightings
 
 ```
-
-
 
 
 

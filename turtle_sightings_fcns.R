@@ -1,4 +1,4 @@
-
+library(sp)
 
 load('RData/studyArea.RData')
 
