@@ -1,6 +1,6 @@
 library(sf)
 
-load('RData/studyArea.RData')
+load('RData/SCB_studyArea.RData')
 
 getCoastLine <- function(filename, lon.limits, lat.limits){
   data1 <- read.table(filename, header = F, row.names = NULL, sep = ',')
