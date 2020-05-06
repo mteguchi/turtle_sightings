@@ -12,7 +12,7 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 
-SWFSC <- T
+SWFSC <- F
 ```
 
 This file is used to extract green turtle sightings in southern CA for Megan's paper. Older data are extracted from the database directly. Newer data were typed into a spreadsheet, after finding out which data have not been entered using sightings_DB_update.Rmd.  New entries were made in data2upload_2020-02-06.xls. 
