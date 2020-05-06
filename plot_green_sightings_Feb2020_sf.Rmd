@@ -11,10 +11,10 @@ green_sihtings_Feb2020.Rmd should be run on a computer with Java. Then, save the
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-source("turtle_sightings_sf_fcns.R")
+#source("turtle_sightings_sf_fcns.R")
 
 # get county lines
-county.lines <- st_read("~/R/Oceans and Maps/ca-county-boundaries/CA_Counties")
+county.lines <- st_read("data/ca-county-boundaries/CA_Counties")
 
 land.color <- '#333333'
 ```
@@ -79,7 +79,7 @@ Map
 
 ```{r}
 # get the coast lines
-coast.line <- getCoastLine('~/R/Oceans and Maps/coast/coast_Epac.txt',
+coast.line <- getCoastLine('data/coast/coast_Epac.txt',
                            lon.limits = c(-121, -116.5),
                            lat.limits = c(32, 35.2))
 
