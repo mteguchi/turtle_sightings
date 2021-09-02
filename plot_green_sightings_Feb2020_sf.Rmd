@@ -8,10 +8,12 @@ This document is used to plot sightings of green turtles along the southern CA. 
 green_sihtings_Feb2020.Rmd should be run on a computer with Java. Then, save the green.SoCal.sightings object as a .csv file. 
 
 ```{r}
+rm(list=ls())
 library(tidyverse)
 library(ggplot2)
 library(lubridate)
-#source("turtle_sightings_sf_fcns.R")
+#library(sf)  sf is loaded in the following file
+source("turtle_sightings_sf_fcns.R")
 
 # get county lines
 county.lines <- st_read("data/ca-county-boundaries/CA_Counties")
